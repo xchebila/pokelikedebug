@@ -152,6 +152,7 @@ class DebuggerApp(ctk.CTk):
         self._pokedex.set_language(lang)
         self._hof.set_language(lang)
         self._encounter.set_language(lang)
+        self._team.set_language(lang)
 
     def _start_sprite_preload(self) -> None:
         def _progress(done: int, total: int) -> None:

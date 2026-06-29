@@ -7,6 +7,7 @@ from typing import Any, Callable
 import customtkinter as ctk
 
 from .widgets import CollapsibleSection
+from ..pokemon_data import get_name
 from ..sprite_loader import load_sprite
 
 GameState = dict[str, Any]
@@ -22,6 +23,7 @@ class TeamSection(CollapsibleSection):
         super().__init__(parent, "⚔️  Équipe")
         self._evaluate    = evaluate
         self._on_refresh  = on_refresh
+        self._lang        = "en"
         self._rows: list[_PokemonRow] = []
 
         ctk.CTkButton(
@@ -42,7 +44,7 @@ class TeamSection(CollapsibleSection):
             for row in self._rows:
                 row.destroy()
             self._rows = [
-                _PokemonRow(self._list_frame, i, self._evaluate)
+                _PokemonRow(self._list_frame, i, self._evaluate, self._lang)
                 for i in range(len(team))
             ]
 
@@ -52,6 +54,11 @@ class TeamSection(CollapsibleSection):
     def _request_refresh(self) -> None:
         if self._on_refresh:
             self._on_refresh()
+
+    def set_language(self, lang: str) -> None:
+        self._lang = lang
+        for row in self._rows:
+            row.set_language(lang)
 
 
 _STATS: list[list[tuple[str, str]]] = [
@@ -68,14 +75,18 @@ class _PokemonRow(ctk.CTkFrame):
         parent: ctk.CTkBaseClass,
         index: int,
         evaluate: Callable[[str], object],
+        lang: str = "en",
     ) -> None:
         super().__init__(parent, fg_color=("#2a2a2a", "#2a2a2a"), corner_radius=6)
         self.pack(fill="x", pady=2)
 
         self._index      = index
         self._evaluate   = evaluate
+        self._lang       = lang
         self._sprite_ref: object = None
         self._last_sid: int = -1
+        self._last_species_id: int = 0
+        self._dirty      = False
 
         # ── Top row : sprite | name | level | HP/maxHP | Apply ──────────
         top = ctk.CTkFrame(self, fg_color="transparent")
@@ -98,10 +109,12 @@ class _PokemonRow(ctk.CTkFrame):
         ctk.CTkLabel(ctrl, text="Niv.", width=28).pack(side="left")
         self._lvl_entry = ctk.CTkEntry(ctrl, width=44)
         self._lvl_entry.pack(side="left", padx=2)
+        self._lvl_entry.bind("<Key>", self._mark_dirty)
 
         ctk.CTkLabel(ctrl, text="HP", width=22).pack(side="left", padx=(6, 0))
         self._hp_entry = ctk.CTkEntry(ctrl, width=44)
         self._hp_entry.pack(side="left", padx=2)
+        self._hp_entry.bind("<Key>", self._mark_dirty)
         self._hp_max_label = ctk.CTkLabel(ctrl, text="/ —", width=40, anchor="w")
         self._hp_max_label.pack(side="left")
 
@@ -120,10 +133,17 @@ class _PokemonRow(ctk.CTkFrame):
                              anchor="e").grid(row=r, column=c * 2, padx=(4, 2), pady=1, sticky="e")
                 e = ctk.CTkEntry(stats_frame, width=52, height=24)
                 e.grid(row=r, column=c * 2 + 1, padx=(0, 8), pady=1, sticky="w")
+                e.bind("<Key>", self._mark_dirty)
                 self._stat_entries[key] = e
 
+    def _mark_dirty(self, _event: object = None) -> None:
+        self._dirty = True
+
+    def set_language(self, lang: str) -> None:
+        self._lang = lang
+        self._name_label.configure(text=get_name(self._last_species_id, self._lang))
+
     def refresh(self, mon: dict) -> None:
-        name   = mon.get("name", "???")
         shiny  = mon.get("isShiny", False)
         lvl    = mon.get("level", 0)
         hp     = mon.get("currentHp", 0)
@@ -131,9 +151,13 @@ class _PokemonRow(ctk.CTkFrame):
         sid    = mon.get("speciesId", 0)
         bs     = mon.get("baseStats", {})
 
-        self._name_label.configure(text=name)
+        self._last_species_id = sid
+        self._name_label.configure(text=get_name(sid, self._lang) if sid else mon.get("name", "???"))
         self._shiny_label.configure(text="★" if shiny else "")
         self._hp_max_label.configure(text=f"/ {max_hp}")
+
+        if self._dirty:
+            return
 
         self._lvl_entry.delete(0, "end")
         self._lvl_entry.insert(0, str(lvl))
@@ -185,3 +209,5 @@ class _PokemonRow(ctk.CTkFrame):
             self._evaluate("; ".join(parts) + ";")
         except Exception:
             pass
+
+        self._dirty = False

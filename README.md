@@ -4,6 +4,10 @@ Application de debug pour [Pokelike](https://pokelike.xyz) — modifier l'équip
 
 Compatible avec **tous les navigateurs** via un script Tampermonkey.
 
+<p align="center">
+  <img src="assets/pokelike-debugger.gif" alt="Démo Pokelike Debugger">
+</p>
+
 ---
 
 ## Installation (testeurs)
@@ -113,10 +117,6 @@ pip install -r requirements.txt
 
 # Lancer sans builder
 python main.py
-
-# Builder
-# Mac :
-pyinstaller PokelikeDebugger.spec
-# Windows :
-build_windows.bat
 ```
+
+Les binaires (Mac, Windows, Linux) sont générés automatiquement par GitHub Actions à chaque tag `v*` et disponibles dans les [Releases](../../releases).
