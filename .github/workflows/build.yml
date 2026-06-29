@@ -1,0 +1,117 @@
+name: Build
+
+on:
+  push:
+    tags: ['v*']       # v1.0.0 → crée une release GitHub avec les binaires
+  workflow_dispatch:   # déclenchement manuel depuis l'onglet Actions
+
+jobs:
+  # ── macOS ──────────────────────────────────────────────────────────────
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install UPX
+        run: brew install upx
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build .app
+        run: pyinstaller PokelikeDebugger.spec
+
+      - name: Zip .app bundle
+        run: cd dist && zip -r ../PokelikeDebugger-mac.zip PokelikeDebugger.app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac
+          path: PokelikeDebugger-mac.zip
+
+  # ── Windows ────────────────────────────────────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install UPX
+        run: choco install upx --no-progress -y
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build .exe
+        run: pyinstaller PokelikeDebugger.spec
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist\PokelikeDebugger.exe
+
+  # ── Linux ──────────────────────────────────────────────────────────────
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: sudo apt-get install -y python3-tk upx-ucl
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build binary
+        run: pyinstaller PokelikeDebugger.spec
+
+      - name: Rename for clarity
+        run: mv dist/PokelikeDebugger dist/PokelikeDebugger-linux
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/PokelikeDebugger-linux
+
+  # ── GitHub Release (tags uniquement) ───────────────────────────────────
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build-mac, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Pokelike Debugger ${{ github.ref_name }}"
+          body: |
+            ## Téléchargement
+
+            | Plateforme | Fichier |
+            |------------|---------|
+            | macOS      | `PokelikeDebugger-mac.zip` — dézipper et double-cliquer sur `.app` |
+            | Windows    | `PokelikeDebugger.exe` — lancer directement |
+            | Linux      | `PokelikeDebugger-linux` — `chmod +x` puis lancer |
+
+            ### Première utilisation
+            Voir le [README](https://github.com/${{ github.repository }}/blob/main/README.md) pour la configuration de Tampermonkey.
+          files: |
+            PokelikeDebugger-mac.zip
+            PokelikeDebugger.exe
+            PokelikeDebugger-linux
