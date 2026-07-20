@@ -14,6 +14,7 @@ from .state_poller import GameState, StatePoller
 from .ui.header import StatusHeader
 from .ui.section_encounter import EncounterSection
 from .ui.section_hof import HofSection
+from .ui.section_mega import MegaSection
 from .ui.section_money import MoneySection
 from .ui.section_pokedex import PokedexSection
 from .ui.section_shiny import ShinySection
@@ -106,6 +107,14 @@ class DebuggerApp(ctk.CTk):
         self._encounter = EncounterSection(enc_tab, evaluate)
         self._encounter.grid(row=0, column=0, sticky="nsew")
 
+        # ── Tab 5: Mega Bracelet ─────────────────────────────────────
+        mega_tab = tabs.add("Mega Bracelet")
+        mega_tab.grid_rowconfigure(0, weight=1)
+        mega_tab.grid_columnconfigure(0, weight=1)
+
+        self._mega = MegaSection(mega_tab, evaluate, self._poller.fetch_mega)
+        self._mega.grid(row=0, column=0, sticky="nsew")
+
     # ------------------------------------------------------------------
     # Callbacks — always re-dispatched to the Tkinter thread via after()
     # ------------------------------------------------------------------
@@ -131,6 +140,7 @@ class DebuggerApp(ctk.CTk):
                 self._poller.fetch_hof(
                     lambda hof: self.after(0, lambda: self._hof.apply_hof(hof))
                 )
+                self._mega.refresh()
 
             self._team.update(state)
             self._money.update(state)

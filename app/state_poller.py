@@ -74,6 +74,30 @@ _HOF_POLL_JS = """
 })()
 """
 
+_MEGA_POLL_JS = """
+(() => {
+    try {
+        if (typeof MEGA_STONES === 'undefined') return { unlocked: false, stones: [] };
+        var unlocked = typeof isMegaBraceletUnlocked === 'function' && isMegaBraceletUnlocked();
+        var stones = MEGA_STONES.map(function(s) {
+            var current  = typeof megaLineMvpCount === 'function' ? megaLineMvpCount(s) : 0;
+            var required = s.tier || 1;
+            var owned    = typeof ownsMegaStone === 'function' ? ownsMegaStone(s) : (current >= required);
+            return {
+                species:  s.species,
+                name:     s.megaName || s.name,
+                required: required,
+                current:  current,
+                owned:    !!owned,
+            };
+        });
+        return { unlocked: unlocked, stones: stones };
+    } catch(e) {
+        return { unlocked: false, stones: [] };
+    }
+})()
+"""
+
 GameState = dict[str, Any]
 StateCallback = Callable[[GameState], None]
 
@@ -138,3 +162,12 @@ class StatePoller:
             except Exception:
                 pass
         threading.Thread(target=_run, daemon=True, name="hof-fetch").start()
+
+    def fetch_mega(self, on_result: Callable[[dict], None]) -> None:
+        def _run() -> None:
+            try:
+                mega = self._client.evaluate(_MEGA_POLL_JS)
+                on_result(mega or {})
+            except Exception:
+                pass
+        threading.Thread(target=_run, daemon=True, name="mega-fetch").start()

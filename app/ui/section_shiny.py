@@ -8,8 +8,11 @@ import customtkinter as ctk
 
 from .widgets import CollapsibleSection
 
-_JS_ON  = "rollShiny = () => true;"
-_JS_OFF = "rollShiny = () => rng() < (hasShinyCharm() ? 0.02 : 0.01);"
+_JS_ON  = "rollShiny = () => true; legendaryShinyChanceFlat = () => 1;"
+_JS_OFF = (
+    "rollShiny = () => rng() < (hasShinyCharm() ? 0.02 : 0.01); "
+    "legendaryShinyChanceFlat = () => hasShinyCharm() ? 0.02 : 0.01;"
+)
 
 
 class ShinySection(CollapsibleSection):
@@ -21,7 +24,7 @@ class ShinySection(CollapsibleSection):
         row = ctk.CTkFrame(self.body, fg_color="transparent")
         row.pack(fill="x", padx=12, pady=12)
 
-        ctk.CTkLabel(row, text="Activer pour la prochaine rencontre / starter").pack(side="left")
+        ctk.CTkLabel(row, text="Rencontres sauvages, starter & légendaires").pack(side="left")
         ctk.CTkSwitch(
             row,
             text="",
